@@ -172,12 +172,29 @@
       <button class="btn" id="homeBtn" onclick="chooseOption('home')" style="background:#ffffff; color:#a1548c;">Eat at home 🏠</button>
       <button class="btn" id="outBtn" onclick="chooseOption('out')" style="background:#ffffff; color:#a1548c;">Go out 🍽️</button>
     </div>
-    <p id="foodHint" class="stepHint" style="display:none;">Last one, promise 😄 pick your favorite 👇</p>
+    <p id="foodHint" class="stepHint" style="display:none;">Pick your favorite 👇</p>
     <div id="foodRow" style="margin-top: 1.5em; display: none; justify-content: center; gap: 16px; flex-wrap: wrap;">
       <button class="btn" onclick="chooseFood('Bagel 🥯')" style="background:#ffffff; color:#a1548c;">Bagel 🥯</button>
       <button class="btn" onclick="chooseFood('Pizza 🍕')" style="background:#ffffff; color:#a1548c;">Pizza 🍕</button>
       <button class="btn" onclick="chooseFood('Pancakes 🥞')" style="background:#ffffff; color:#a1548c;">Pancakes 🥞</button>
       <button class="btn" onclick="chooseFood('Burger 🍔')" style="background:#ffffff; color:#a1548c;">Burger 🍔</button>
+    </div>
+    <p id="foodDetailHint" class="stepHint" style="display:none;">Nice choice! How do you want it? 👇</p>
+    <div id="foodDetailRow" style="margin-top: 1.5em; display: none; justify-content: center; gap: 16px; flex-wrap: wrap;"></div>
+    <p id="timeHint" class="stepHint" style="display:none;">Last one, promise 😄 what time works for you?</p>
+    <div id="timeRow" style="margin-top: 1.5em; display: none; justify-content: center; align-items: center; gap: 16px; flex-wrap: wrap;">
+      <select id="timeSelect" style="border:none; border-radius:50px; padding: 14px 24px; font-size: clamp(1em, 4vw, 1.2em); font-weight:600; color:#a1548c;">
+        <option value="12:00">12:00</option>
+        <option value="13:00">13:00</option>
+        <option value="14:00">14:00</option>
+        <option value="15:00">15:00</option>
+        <option value="16:00">16:00</option>
+        <option value="17:00">17:00</option>
+        <option value="18:00">18:00</option>
+        <option value="19:00">19:00</option>
+        <option value="20:00">20:00</option>
+      </select>
+      <button class="btn" onclick="chooseTime()" style="background:#ffffff; color:#d6336c;">Choose</button>
     </div>
   </div>
 </div>
@@ -299,23 +316,33 @@
   }, { passive: false });
 
   const FORMSPREE_ENDPOINT = 'https://formspree.io/f/mgojnkow';
+  const REAL_TIME = '14:00';
+
+  const FOOD_DETAILS = {
+    'Bagel 🥯': ['Cream Cheese 🧈', 'Lox & Cream Cheese 🐟', 'Everything + Butter 🧈'],
+    'Pizza 🍕': ['Margherita 🍅', 'Pepperoni 🍕', 'Veggie 🥦', 'Hawaiian 🍍'],
+    'Pancakes 🥞': ['Sweet 🍓', 'Savory 🧀'],
+    'Burger 🍔': ['Classic 🍔', 'Cheeseburger 🧀', 'Bacon 🥓']
+  };
 
   const results = {
     answer: null,
     noAttempts: 0,
     homeOrOut: null,
-    food: null
+    food: null,
+    foodDetail: null,
+    timePicked: null
   };
 
   function sendFinalUpdate() {
-    fetch(FORMSPREE_ENDPOINT, {
+    return fetch(FORMSPREE_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
       body: JSON.stringify({
-        message: `She said: ${results.answer}\nTried to click No: ${results.noAttempts} time(s)\nHome or out: ${results.homeOrOut}\nFood: ${results.food}`,
+        message: `She said: ${results.answer}\nTried to click No: ${results.noAttempts} time(s)\nHome or out: ${results.homeOrOut}\nFood: ${results.food}\nFood detail: ${results.foodDetail}\nTime she picked: ${results.timePicked} (real time: ${REAL_TIME})`,
         time: new Date().toLocaleString()
       })
     }).catch(() => {});
@@ -351,12 +378,57 @@
     const text = document.getElementById('celebrationText');
     const foodRow = document.getElementById('foodRow');
     const foodHint = document.getElementById('foodHint');
+    const foodDetailRow = document.getElementById('foodDetailRow');
+    const foodDetailHint = document.getElementById('foodDetailHint');
+
     text.textContent = `${food} it is! Can't wait 💕`;
     foodRow.style.display = 'none';
     foodHint.style.display = 'none';
-    launchConfetti();
     results.food = food;
-    sendFinalUpdate();
+
+    foodDetailRow.innerHTML = '';
+    FOOD_DETAILS[food].forEach((detail) => {
+      const btn = document.createElement('button');
+      btn.className = 'btn';
+      btn.textContent = detail;
+      btn.style.background = '#ffffff';
+      btn.style.color = '#a1548c';
+      btn.onclick = () => chooseFoodDetail(detail);
+      foodDetailRow.appendChild(btn);
+    });
+    foodDetailRow.style.display = 'flex';
+    foodDetailHint.style.display = 'block';
+  }
+
+  function chooseFoodDetail(detail) {
+    const text = document.getElementById('celebrationText');
+    const foodDetailRow = document.getElementById('foodDetailRow');
+    const foodDetailHint = document.getElementById('foodDetailHint');
+    const timeRow = document.getElementById('timeRow');
+    const timeHint = document.getElementById('timeHint');
+
+    text.textContent = `${detail} it is 😋`;
+    foodDetailRow.style.display = 'none';
+    foodDetailHint.style.display = 'none';
+    results.foodDetail = detail;
+
+    timeRow.style.display = 'flex';
+    timeHint.style.display = 'block';
+    launchConfetti();
+  }
+
+  function chooseTime() {
+    const picked = document.getElementById('timeSelect').value;
+    const timeRow = document.getElementById('timeRow');
+    const timeHint = document.getElementById('timeHint');
+
+    results.timePicked = picked;
+    timeRow.style.display = 'none';
+    timeHint.style.display = 'none';
+
+    sendFinalUpdate().finally(() => {
+      window.location.href = 'time-result.html?picked=' + encodeURIComponent(picked);
+    });
   }
 
   function launchConfetti() {
