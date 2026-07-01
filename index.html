@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A Question For You 💕</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: linear-gradient(135deg, #ff9a9e, #fad0c4, #fbc2eb, #a18cd1);
+    background-size: 400% 400%;
+    animation: gradientShift 12s ease infinite;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  .heart {
+    position: fixed;
+    top: -10%;
+    font-size: 24px;
+    color: rgba(255,255,255,0.7);
+    user-select: none;
+    pointer-events: none;
+    animation: fall linear infinite;
+  }
+  @keyframes fall {
+    to { transform: translateY(115vh) rotate(360deg); }
+  }
+
+  #stage {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  #content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 5;
+    width: 90vw;
+    max-width: 600px;
+    padding: 0 4vw;
+  }
+
+  h1 {
+    color: #fff;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.25);
+    font-size: clamp(1.4em, 6vw, 2.2em);
+    margin-bottom: 0.2em;
+  }
+
+  #caption {
+    color: #fff;
+    font-size: clamp(0.95em, 3.5vw, 1.1em);
+    min-height: 1.5em;
+    margin-bottom: 1.5em;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+  }
+
+  #hint, .stepHint {
+    color: rgba(255,255,255,0.9);
+    font-size: clamp(0.85em, 3vw, 1em);
+    margin: 0.2em 0 1em;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.2);
+  }
+
+  .btn {
+    border: none;
+    border-radius: 50px;
+    padding: clamp(12px, 3vw, 16px) clamp(22px, 7vw, 36px);
+    font-size: clamp(1em, 4vw, 1.2em);
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    white-space: nowrap;
+  }
+
+  #yesBtn {
+    background: #ffffff;
+    color: #d6336c;
+    margin: 0 12px;
+  }
+  #yesBtn:hover {
+    transform: scale(1.08);
+  }
+
+  #noBtn {
+    background: rgba(255,255,255,0.85);
+    color: #555;
+    position: relative;
+  }
+
+  #noBtn.fleeing {
+    position: fixed;
+    z-index: 10;
+    transition: top 0.28s cubic-bezier(.2,1.4,.5,1), left 0.28s cubic-bezier(.2,1.4,.5,1);
+  }
+
+  #buttonRow {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  #celebration {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 20;
+    color: #fff;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    width: 90vw;
+    max-width: 600px;
+    padding: 0 4vw;
+  }
+  #celebration h1 { font-size: clamp(1.8em, 7vw, 2.6em); }
+  #celebration p { font-size: clamp(1em, 4vw, 1.2em); }
+
+  .confetti {
+    position: fixed;
+    top: -5%;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    pointer-events: none;
+    animation: confettiFall linear forwards;
+  }
+  @keyframes confettiFall {
+    to { transform: translateY(110vh) rotate(720deg); opacity: 0.9; }
+  }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <div id="content">
+    <h1>Do you want to go on a date with me? 💕</h1>
+    <p id="hint">Go ahead, try tapping "No" 😏 I dare you</p>
+    <div id="caption">&nbsp;</div>
+    <div id="buttonRow">
+      <button class="btn" id="yesBtn" onclick="sayYes()">Yes 😍</button>
+      <button class="btn" id="noBtn">No</button>
+    </div>
+  </div>
+
+  <div id="celebration">
+    <h1>Yay! 🎉</h1>
+    <p id="celebrationText">Knew you'd say yes. Can't wait 💕</p>
+    <p id="choiceHint" class="stepHint">Now tap one to decide what we're doing 👇</p>
+    <div id="choiceRow" style="margin-top: 1.5em; display: flex; justify-content: center; gap: 16px; flex-wrap: wrap;">
+      <button class="btn" id="homeBtn" onclick="chooseOption('home')" style="background:#ffffff; color:#a1548c;">Eat at home 🏠</button>
+      <button class="btn" id="outBtn" onclick="chooseOption('out')" style="background:#ffffff; color:#a1548c;">Go out 🍽️</button>
+    </div>
+    <p id="foodHint" class="stepHint" style="display:none;">Last one, promise 😄 pick your favorite 👇</p>
+    <div id="foodRow" style="margin-top: 1.5em; display: none; justify-content: center; gap: 16px; flex-wrap: wrap;">
+      <button class="btn" onclick="chooseFood('Bagel 🥯')" style="background:#ffffff; color:#a1548c;">Bagel 🥯</button>
+      <button class="btn" onclick="chooseFood('Pizza 🍕')" style="background:#ffffff; color:#a1548c;">Pizza 🍕</button>
+      <button class="btn" onclick="chooseFood('Pancakes 🥞')" style="background:#ffffff; color:#a1548c;">Pancakes 🥞</button>
+      <button class="btn" onclick="chooseFood('Burger 🍔')" style="background:#ffffff; color:#a1548c;">Burger 🍔</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const noBtn = document.getElementById('noBtn');
+  const yesBtn = document.getElementById('yesBtn');
+  const caption = document.getElementById('caption');
+  const stage = document.getElementById('stage');
+  const content = document.getElementById('content');
+
+  let attempts = 0;
+  let lastDodge = 0;
+  const DODGE_COOLDOWN = 250; // ms
+  const DODGE_RADIUS = 110; // px, how close before it flees
+  const MAX_ATTEMPTS_BEFORE_TELEPORT = 5;
+
+  const captions = [
+    "",
+    "Oh, you're actually trying it 😂",
+    "Nope, not today 🙃",
+    "It's faster than you, sorry 😅",
+    "This is genuinely not going to happen 💀",
+    "Ok you've proven your point, it's impossible 🏆",
+    "Fine, since 'No' clearly isn't cooperating... here's 'Yes' 😌"
+  ];
+
+  function setCaption(i) {
+    caption.textContent = captions[Math.min(i, captions.length - 1)];
+  }
+
+  function maxYesScale() {
+    return window.innerWidth < 480 ? 1.4 : 1.8;
+  }
+
+  function growYes() {
+    const scale = Math.min(1 + attempts * 0.08, maxYesScale());
+    yesBtn.style.transform = `scale(${scale})`;
+  }
+
+  function randomPosition() {
+    const margin = 20;
+    const w = noBtn.offsetWidth || 120;
+    const h = noBtn.offsetHeight || 56;
+    const maxX = window.innerWidth - w - margin;
+    const maxY = window.innerHeight - h - margin;
+    const x = margin + Math.random() * Math.max(maxX - margin, 0);
+    const y = margin + Math.random() * Math.max(maxY - margin, 0);
+    return { x, y };
+  }
+
+  function dodge() {
+    const now = Date.now();
+    if (now - lastDodge < DODGE_COOLDOWN) return;
+    lastDodge = now;
+
+    attempts++;
+    setCaption(attempts);
+    growYes();
+
+    if (!noBtn.classList.contains('fleeing')) {
+      noBtn.classList.add('fleeing');
+    }
+
+    if (attempts >= MAX_ATTEMPTS_BEFORE_TELEPORT) {
+      teleportToYes();
+      return;
+    }
+
+    const { x, y } = randomPosition();
+    noBtn.style.left = x + 'px';
+    noBtn.style.top = y + 'px';
+  }
+
+  function teleportToYes() {
+    // "Teleport" the No button off-screen/away and shrink it into oblivion,
+    // effectively leaving only the Yes button reachable under the cursor.
+    noBtn.style.transition = 'all 0.4s ease';
+    noBtn.style.left = (window.innerWidth + 100) + 'px';
+    noBtn.style.top = (window.innerHeight + 100) + 'px';
+    noBtn.style.opacity = '0';
+    noBtn.style.pointerEvents = 'none';
+    setCaption(captions.length - 1);
+    yesBtn.style.transform = `scale(${maxYesScale() + 0.4})`;
+    yesBtn.focus();
+    results.noAttempts = attempts;
+  }
+
+  // Dodge when the cursor gets close, not just on direct hover
+  document.addEventListener('mousemove', (e) => {
+    if (noBtn.style.opacity === '0') return;
+    const rect = noBtn.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dist = Math.hypot(e.clientX - cx, e.clientY - cy);
+    if (dist < DODGE_RADIUS) dodge();
+  });
+
+  // Dodge when a finger drags close on touch devices
+  document.addEventListener('touchmove', (e) => {
+    if (noBtn.style.opacity === '0') return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    const rect = noBtn.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dist = Math.hypot(touch.clientX - cx, touch.clientY - cy);
+    if (dist < DODGE_RADIUS) dodge();
+  }, { passive: true });
+
+  noBtn.addEventListener('mouseenter', dodge);
+  noBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    dodge();
+  });
+  noBtn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    dodge();
+  }, { passive: false });
+
+  const FORMSPREE_ENDPOINT = 'https://formspree.io/f/mgojnkow';
+
+  const results = {
+    answer: null,
+    noAttempts: 0,
+    homeOrOut: null,
+    food: null
+  };
+
+  function sendFinalUpdate() {
+    fetch(FORMSPREE_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        message: `She said: ${results.answer}\nTried to click No: ${results.noAttempts} time(s)\nHome or out: ${results.homeOrOut}\nFood: ${results.food}`,
+        time: new Date().toLocaleString()
+      })
+    }).catch(() => {});
+  }
+
+  function sayYes() {
+    content.style.display = 'none';
+    document.getElementById('celebration').style.display = 'block';
+    launchConfetti();
+    results.answer = 'Yes 😍';
+  }
+
+  function chooseOption(choice) {
+    const text = document.getElementById('celebrationText');
+    const choiceRow = document.getElementById('choiceRow');
+    const choiceHint = document.getElementById('choiceHint');
+    const foodRow = document.getElementById('foodRow');
+    const foodHint = document.getElementById('foodHint');
+    if (choice === 'home') {
+      text.textContent = "Perfect, I'll cook something nice for us at home 🏠 What are you craving?";
+    } else {
+      text.textContent = "Perfect, let's get dressed up and go out 🍽️ What are you craving?";
+    }
+    choiceRow.style.display = 'none';
+    choiceHint.style.display = 'none';
+    foodRow.style.display = 'flex';
+    foodHint.style.display = 'block';
+    launchConfetti();
+    results.homeOrOut = choice === 'home' ? 'Eat at home 🏠' : 'Go out 🍽️';
+  }
+
+  function chooseFood(food) {
+    const text = document.getElementById('celebrationText');
+    const foodRow = document.getElementById('foodRow');
+    const foodHint = document.getElementById('foodHint');
+    text.textContent = `${food} it is! Can't wait 💕`;
+    foodRow.style.display = 'none';
+    foodHint.style.display = 'none';
+    launchConfetti();
+    results.food = food;
+    sendFinalUpdate();
+  }
+
+  function launchConfetti() {
+    const colors = ['#ff9a9e', '#fad0c4', '#fbc2eb', '#a18cd1', '#ffffff', '#ffd6e8'];
+    for (let i = 0; i < 80; i++) {
+      const el = document.createElement('div');
+      el.className = 'confetti';
+      el.style.left = Math.random() * 100 + 'vw';
+      el.style.background = colors[Math.floor(Math.random() * colors.length)];
+      el.style.animationDuration = (2 + Math.random() * 2) + 's';
+      el.style.animationDelay = (Math.random() * 0.5) + 's';
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 4500);
+    }
+  }
+
+  // Floating hearts background
+  function spawnHeart() {
+    const heart = document.createElement('div');
+    heart.className = 'heart';
+    heart.textContent = ['💕','💖','💗','❤️','💓'][Math.floor(Math.random() * 5)];
+    heart.style.left = Math.random() * 100 + 'vw';
+    heart.style.fontSize = (16 + Math.random() * 20) + 'px';
+    const duration = 6 + Math.random() * 6;
+    heart.style.animationDuration = duration + 's';
+    stage.appendChild(heart);
+    setTimeout(() => heart.remove(), duration * 1000);
+  }
+  setInterval(spawnHeart, 500);
+</script>
+
+</body>
+</html>
