@@ -172,13 +172,13 @@
       <button class="btn" id="homeBtn" onclick="chooseOption('home')" style="background:#ffffff; color:#a1548c;">Eat at home 🏠</button>
       <button class="btn" id="outBtn" onclick="chooseOption('out')" style="background:#ffffff; color:#a1548c;">Go out 🍽️</button>
     </div>
-    <p id="foodHint" class="stepHint" style="display:none;">Pick your favorite 👇</p>
-    <div id="foodRow" style="margin-top: 1.5em; display: none; justify-content: center; gap: 16px; flex-wrap: wrap;">
-      <button class="btn" onclick="chooseFood('Bagel 🥯')" style="background:#ffffff; color:#a1548c;">Bagel 🥯</button>
-      <button class="btn" onclick="chooseFood('Pizza 🍕')" style="background:#ffffff; color:#a1548c;">Pizza 🍕</button>
-      <button class="btn" onclick="chooseFood('Pancakes 🥞')" style="background:#ffffff; color:#a1548c;">Pancakes 🥞</button>
-      <button class="btn" onclick="chooseFood('Burger 🍔')" style="background:#ffffff; color:#a1548c;">Burger 🍔</button>
+    <p id="homeNagHint" class="stepHint" style="display:none;"></p>
+    <div id="homeNagRow" style="margin-top: 1.5em; display: none; justify-content: center; gap: 16px; flex-wrap: wrap;">
+      <button class="btn" onclick="switchToOut()" style="background:#ffffff; color:#d6336c;">Ok fine, take me out 😏</button>
+      <button class="btn" onclick="confirmHome()" style="background:#ffffff; color:#a1548c;">No, staying home 🏠</button>
     </div>
+    <p id="foodHint" class="stepHint" style="display:none;">Pick your favorite 👇</p>
+    <div id="foodRow" style="margin-top: 1.5em; display: none; justify-content: center; gap: 16px; flex-wrap: wrap;"></div>
     <p id="foodDetailHint" class="stepHint" style="display:none;">Nice choice! How do you want it? 👇</p>
     <div id="foodDetailRow" style="margin-top: 1.5em; display: none; justify-content: center; gap: 16px; flex-wrap: wrap;"></div>
     <p id="timeHint" class="stepHint" style="display:none;">Last one, promise 😄 what time works for you?</p>
@@ -325,6 +325,18 @@
     'Burger 🍔': ['Classic 🍔', 'Chicken 🍗']
   };
 
+  const FOOD_OPTIONS = {
+    home: ['Pizza 🍕', 'Burger 🍔'],
+    out: ['Bagel 🥯', 'Pizza 🍕', 'Pancakes 🥞', 'Burger 🍔']
+  };
+
+  const HOME_NAGS = [
+    "Wait wait wait 🤨 going out has WAY more food options (bagel, pizza, pancakes, burger)... home only has pizza & burger. Sure about this? 😏",
+    "Ok but seriously, there are literal pancakes out there 🥞 and bagels 🥯 you'd be missing out on. Last chance 😅"
+  ];
+  const MAX_HOME_NAGS = HOME_NAGS.length;
+  let homeNagCount = 0;
+
   const results = {
     answer: null,
     noAttempts: 0,
@@ -359,19 +371,66 @@
     const text = document.getElementById('celebrationText');
     const choiceRow = document.getElementById('choiceRow');
     const choiceHint = document.getElementById('choiceHint');
-    const foodRow = document.getElementById('foodRow');
-    const foodHint = document.getElementById('foodHint');
-    if (choice === 'home') {
-      text.textContent = "Perfect, I'll cook something nice for us at home 🏠 What are you craving?";
-    } else {
-      text.textContent = "Perfect, let's get dressed up and go out 🍽️ What are you craving?";
-    }
     choiceRow.style.display = 'none';
     choiceHint.style.display = 'none';
+
+    if (choice === 'home') {
+      results.homeOrOut = 'Eat at home 🏠';
+      text.textContent = "Hmm, staying in huh? 🏠";
+      showHomeNag();
+    } else {
+      results.homeOrOut = 'Go out 🍽️';
+      text.textContent = "Perfect, let's get dressed up and go out 🍽️ What are you craving?";
+      launchConfetti();
+      showFoodOptions('out');
+    }
+  }
+
+  function showHomeNag() {
+    const homeNagRow = document.getElementById('homeNagRow');
+    const homeNagHint = document.getElementById('homeNagHint');
+    homeNagHint.textContent = HOME_NAGS[Math.min(homeNagCount, HOME_NAGS.length - 1)];
+    homeNagHint.style.display = 'block';
+    homeNagRow.style.display = 'flex';
+  }
+
+  function switchToOut() {
+    document.getElementById('homeNagRow').style.display = 'none';
+    document.getElementById('homeNagHint').style.display = 'none';
+    results.homeOrOut = 'Go out 🍽️ (talked out of staying home 😏)';
+    document.getElementById('celebrationText').textContent = "Knew it 😏 let's get dressed up and go out! What are you craving?";
+    launchConfetti();
+    showFoodOptions('out');
+  }
+
+  function confirmHome() {
+    homeNagCount++;
+    if (homeNagCount < MAX_HOME_NAGS) {
+      showHomeNag();
+      return;
+    }
+    document.getElementById('homeNagRow').style.display = 'none';
+    document.getElementById('homeNagHint').style.display = 'none';
+    document.getElementById('celebrationText').textContent = "Ok, home it is 🏠 What are you craving?";
+    launchConfetti();
+    showFoodOptions('home');
+  }
+
+  function showFoodOptions(branch) {
+    const foodRow = document.getElementById('foodRow');
+    const foodHint = document.getElementById('foodHint');
+    foodRow.innerHTML = '';
+    FOOD_OPTIONS[branch].forEach((food) => {
+      const btn = document.createElement('button');
+      btn.className = 'btn';
+      btn.textContent = food;
+      btn.style.background = '#ffffff';
+      btn.style.color = '#a1548c';
+      btn.onclick = () => chooseFood(food);
+      foodRow.appendChild(btn);
+    });
     foodRow.style.display = 'flex';
     foodHint.style.display = 'block';
-    launchConfetti();
-    results.homeOrOut = choice === 'home' ? 'Eat at home 🏠' : 'Go out 🍽️';
   }
 
   function chooseFood(food) {
