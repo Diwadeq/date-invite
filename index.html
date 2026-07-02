@@ -281,7 +281,6 @@
     yesBtn.style.transform = `scale(${maxYesScale() + 0.4})`;
     yesBtn.focus();
     results.noAttempts = attempts;
-    logEvent(`She tried clicking No ${attempts} time(s) before giving up`);
   }
 
   // Dodge when the cursor gets close, not just on direct hover
@@ -316,7 +315,6 @@
     dodge();
   }, { passive: false });
 
-  const FORMSPREE_ENDPOINT = 'https://formspree.io/f/mgojnkow';
   const REAL_TIME = '14:00';
 
   const FOOD_DETAILS = {
@@ -348,41 +346,11 @@
     timePicked: null
   };
 
-  const activityLog = [];
-  function logEvent(text) {
-    activityLog.push(`[${new Date().toLocaleTimeString()}] ${text}`);
-  }
-
-  function sendFinalUpdate() {
-    const finalSummary = `Final answers:\n`
-      + `- Answer: ${results.answer}\n`
-      + `- Tried to click No: ${results.noAttempts} time(s)\n`
-      + `- Home or out: ${results.homeOrOut}\n`
-      + `- Food: ${results.food}\n`
-      + `- Food detail: ${results.foodDetail}\n`
-      + `- Time she picked: ${results.timePicked} (real time: ${REAL_TIME})`;
-
-    const fullLog = `Full activity log:\n` + activityLog.join('\n');
-
-    return fetch(FORMSPREE_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({
-        message: `${finalSummary}\n\n${fullLog}`,
-        time: new Date().toLocaleString()
-      })
-    }).catch(() => {});
-  }
-
   function sayYes() {
     content.style.display = 'none';
     document.getElementById('celebration').style.display = 'block';
     launchConfetti();
     results.answer = 'Yes 😍';
-    logEvent('She said Yes to the date');
   }
 
   function chooseOption(choice) {
@@ -392,7 +360,6 @@
     choiceHint.style.display = 'none';
 
     currentChoice = choice;
-    logEvent(`She first picked: ${choice === 'home' ? 'Eat at home' : 'Go out'}`);
     showConfirmChoice();
   }
 
@@ -423,7 +390,6 @@
   function flipChoice() {
     flipCount++;
     currentChoice = currentChoice === 'home' ? 'out' : 'home';
-    logEvent(`She changed her mind to: ${currentChoice === 'home' ? 'Eat at home' : 'Go out'} (flip #${flipCount})`);
 
     if (flipCount < MAX_FLIPS) {
       showConfirmChoice();
@@ -433,7 +399,6 @@
   }
 
   function confirmChoice() {
-    logEvent(`She confirmed: ${currentChoice === 'home' ? 'Eat at home' : 'Go out'}`);
     finalizeChoice();
   }
 
@@ -477,7 +442,6 @@
     foodRow.style.display = 'none';
     foodHint.style.display = 'none';
     results.food = food;
-    logEvent(`Picked food: ${food}`);
 
     foodDetailRow.innerHTML = '';
     FOOD_DETAILS[food].forEach((detail) => {
@@ -504,7 +468,6 @@
     foodDetailRow.style.display = 'none';
     foodDetailHint.style.display = 'none';
     results.foodDetail = detail;
-    logEvent(`Picked food detail: ${detail}`);
 
     timeRow.style.display = 'flex';
     timeHint.style.display = 'block';
@@ -519,11 +482,8 @@
     results.timePicked = picked;
     timeRow.style.display = 'none';
     timeHint.style.display = 'none';
-    logEvent(`Picked time: ${picked} (real time is ${REAL_TIME})`);
 
-    sendFinalUpdate().finally(() => {
-      window.location.href = 'time-result.html?picked=' + encodeURIComponent(picked);
-    });
+    window.location.href = 'time-result.html?picked=' + encodeURIComponent(picked);
   }
 
   function launchConfetti() {
