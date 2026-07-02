@@ -63,7 +63,7 @@
     margin-bottom: 0.2em;
   }
 
-  #caption {
+  #caption, .caption {
     color: #fff;
     font-size: clamp(0.95em, 3.5vw, 1.1em);
     min-height: 1.5em;
@@ -172,10 +172,11 @@
       <button class="btn" id="homeBtn" onclick="chooseOption('home')" style="background:#ffffff; color:#a1548c;">Eat at home 🏠</button>
       <button class="btn" id="outBtn" onclick="chooseOption('out')" style="background:#ffffff; color:#a1548c;">Go out 🍽️</button>
     </div>
-    <p id="confirmHint" class="stepHint" style="display:none;"></p>
-    <div id="confirmRow" style="margin-top: 1.5em; display: none; justify-content: center; gap: 16px; flex-wrap: wrap;">
-      <button class="btn" id="confirmYesBtn" style="background:#ffffff; color:#a1548c;"></button>
-      <button class="btn" id="confirmFlipBtn" style="background:#ffffff; color:#d6336c;"></button>
+    <p id="homeConfirmIntro" class="stepHint" style="display:none;">Wait, are you REALLY sure? 🤔</p>
+    <p id="homeConfirmCaption" class="caption" style="display:none;">&nbsp;</p>
+    <div id="homeConfirmRow" style="margin-top: 1.5em; display: none; justify-content: center; gap: 16px; flex-wrap: wrap;">
+      <button class="btn" id="homeYesBtn" style="background:#ffffff; color:#a1548c;">Yes, stay home 🏠</button>
+      <button class="btn" id="homeNoBtn" onclick="finalizeToOut()" style="background:#ffffff; color:#d6336c;">No, let's go out 🍽️</button>
     </div>
     <p id="foodHint" class="stepHint" style="display:none;">Pick your favorite 👇</p>
     <div id="foodRow" style="margin-top: 1.5em; display: none; justify-content: center; gap: 16px; flex-wrap: wrap;"></div>
@@ -200,19 +201,104 @@
 </div>
 
 <script>
-  const noBtn = document.getElementById('noBtn');
-  const yesBtn = document.getElementById('yesBtn');
-  const caption = document.getElementById('caption');
   const stage = document.getElementById('stage');
   const content = document.getElementById('content');
 
-  let attempts = 0;
-  let lastDodge = 0;
-  const DODGE_COOLDOWN = 250; // ms
-  const DODGE_RADIUS = 110; // px, how close before it flees
-  const MAX_ATTEMPTS_BEFORE_TELEPORT = 5;
+  function maxScaleFor(el) {
+    return window.innerWidth < 480 ? 1.4 : 1.8;
+  }
 
-  const captions = [
+  // Reusable "dodge until forced" gag: fleeBtn runs away from the cursor/finger
+  // until maxAttempts is hit, then it vanishes and staticBtn takes over.
+  function createDodgeGame({ fleeBtn, staticBtn, captionEl, captions, maxAttempts, radius = 110, cooldown = 250, onGiveUp }) {
+    let attempts = 0;
+    let lastDodge = 0;
+    let active = true;
+
+    function setCaption(i) {
+      if (captionEl) captionEl.textContent = captions[Math.min(i, captions.length - 1)];
+    }
+
+    function growStatic() {
+      const scale = Math.min(1 + attempts * 0.08, maxScaleFor(staticBtn));
+      staticBtn.style.transform = `scale(${scale})`;
+    }
+
+    function randomPosition() {
+      const margin = 20;
+      const w = fleeBtn.offsetWidth || 120;
+      const h = fleeBtn.offsetHeight || 56;
+      const maxX = window.innerWidth - w - margin;
+      const maxY = window.innerHeight - h - margin;
+      const x = margin + Math.random() * Math.max(maxX - margin, 0);
+      const y = margin + Math.random() * Math.max(maxY - margin, 0);
+      return { x, y };
+    }
+
+    function dodge() {
+      if (!active) return;
+      const now = Date.now();
+      if (now - lastDodge < cooldown) return;
+      lastDodge = now;
+
+      attempts++;
+      setCaption(attempts);
+      growStatic();
+
+      if (!fleeBtn.classList.contains('fleeing')) {
+        fleeBtn.classList.add('fleeing');
+      }
+
+      if (attempts >= maxAttempts) {
+        giveUp();
+        return;
+      }
+
+      const { x, y } = randomPosition();
+      fleeBtn.style.left = x + 'px';
+      fleeBtn.style.top = y + 'px';
+    }
+
+    function giveUp() {
+      active = false;
+      fleeBtn.style.transition = 'all 0.4s ease';
+      fleeBtn.style.left = (window.innerWidth + 100) + 'px';
+      fleeBtn.style.top = (window.innerHeight + 100) + 'px';
+      fleeBtn.style.opacity = '0';
+      fleeBtn.style.pointerEvents = 'none';
+      setCaption(captions.length - 1);
+      staticBtn.style.transform = `scale(${maxScaleFor(staticBtn) + 0.4})`;
+      staticBtn.focus();
+      if (onGiveUp) onGiveUp(attempts);
+    }
+
+    function proximityCheck(clientX, clientY) {
+      if (!active) return;
+      const rect = fleeBtn.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dist = Math.hypot(clientX - cx, clientY - cy);
+      if (dist < radius) dodge();
+    }
+
+    document.addEventListener('mousemove', (e) => proximityCheck(e.clientX, e.clientY));
+    document.addEventListener('touchmove', (e) => {
+      const touch = e.touches[0];
+      if (touch) proximityCheck(touch.clientX, touch.clientY);
+    }, { passive: true });
+
+    fleeBtn.addEventListener('mouseenter', dodge);
+    fleeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      dodge();
+    });
+    fleeBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      dodge();
+    }, { passive: false });
+  }
+
+  const NO_CAPTIONS = [
     "",
     "Oh, you're actually trying it 😂",
     "Nope, not today 🙃",
@@ -222,99 +308,17 @@
     "Fine, since 'No' clearly isn't cooperating... here's 'Yes' 😌"
   ];
 
-  function setCaption(i) {
-    caption.textContent = captions[Math.min(i, captions.length - 1)];
-  }
-
-  function maxYesScale() {
-    return window.innerWidth < 480 ? 1.4 : 1.8;
-  }
-
-  function growYes() {
-    const scale = Math.min(1 + attempts * 0.08, maxYesScale());
-    yesBtn.style.transform = `scale(${scale})`;
-  }
-
-  function randomPosition() {
-    const margin = 20;
-    const w = noBtn.offsetWidth || 120;
-    const h = noBtn.offsetHeight || 56;
-    const maxX = window.innerWidth - w - margin;
-    const maxY = window.innerHeight - h - margin;
-    const x = margin + Math.random() * Math.max(maxX - margin, 0);
-    const y = margin + Math.random() * Math.max(maxY - margin, 0);
-    return { x, y };
-  }
-
-  function dodge() {
-    const now = Date.now();
-    if (now - lastDodge < DODGE_COOLDOWN) return;
-    lastDodge = now;
-
-    attempts++;
-    setCaption(attempts);
-    growYes();
-
-    if (!noBtn.classList.contains('fleeing')) {
-      noBtn.classList.add('fleeing');
+  createDodgeGame({
+    fleeBtn: document.getElementById('noBtn'),
+    staticBtn: document.getElementById('yesBtn'),
+    captionEl: document.getElementById('caption'),
+    captions: NO_CAPTIONS,
+    maxAttempts: 5,
+    onGiveUp: (attempts) => {
+      results.noAttempts = attempts;
+      logEvent(`She tried clicking No ${attempts} time(s) before giving up`);
     }
-
-    if (attempts >= MAX_ATTEMPTS_BEFORE_TELEPORT) {
-      teleportToYes();
-      return;
-    }
-
-    const { x, y } = randomPosition();
-    noBtn.style.left = x + 'px';
-    noBtn.style.top = y + 'px';
-  }
-
-  function teleportToYes() {
-    // "Teleport" the No button off-screen/away and shrink it into oblivion,
-    // effectively leaving only the Yes button reachable under the cursor.
-    noBtn.style.transition = 'all 0.4s ease';
-    noBtn.style.left = (window.innerWidth + 100) + 'px';
-    noBtn.style.top = (window.innerHeight + 100) + 'px';
-    noBtn.style.opacity = '0';
-    noBtn.style.pointerEvents = 'none';
-    setCaption(captions.length - 1);
-    yesBtn.style.transform = `scale(${maxYesScale() + 0.4})`;
-    yesBtn.focus();
-    results.noAttempts = attempts;
-    logEvent(`She tried clicking No ${attempts} time(s) before giving up`);
-  }
-
-  // Dodge when the cursor gets close, not just on direct hover
-  document.addEventListener('mousemove', (e) => {
-    if (noBtn.style.opacity === '0') return;
-    const rect = noBtn.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const dist = Math.hypot(e.clientX - cx, e.clientY - cy);
-    if (dist < DODGE_RADIUS) dodge();
   });
-
-  // Dodge when a finger drags close on touch devices
-  document.addEventListener('touchmove', (e) => {
-    if (noBtn.style.opacity === '0') return;
-    const touch = e.touches[0];
-    if (!touch) return;
-    const rect = noBtn.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const dist = Math.hypot(touch.clientX - cx, touch.clientY - cy);
-    if (dist < DODGE_RADIUS) dodge();
-  }, { passive: true });
-
-  noBtn.addEventListener('mouseenter', dodge);
-  noBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    dodge();
-  });
-  noBtn.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    dodge();
-  }, { passive: false });
 
   const FORMSPREE_ENDPOINT = 'https://formspree.io/f/mgojnkow';
   const REAL_TIME = '14:00';
@@ -331,13 +335,14 @@
     out: ['Bagel 🥯', 'Pizza 🍕', 'Pancakes 🥞', 'Burger 🍔']
   };
 
-  const CONFIRM_HINTS = [
-    "Just double-checking, are you sure? 😏",
-    "Really, really sure? This is your last chance to change your mind 😅"
+  const HOME_CAPTIONS = [
+    "",
+    "Wait, are you REALLY sure? 🤔",
+    "Home cooking, huh? Bold move 😏",
+    "It really doesn't want to stay put 😅",
+    "Ok this button has made its choice 💀",
+    "Fine, since 'stay home' clearly isn't cooperating... 😌"
   ];
-  const MAX_FLIPS = 2;
-  let flipCount = 0;
-  let currentChoice = null;
 
   const results = {
     answer: null,
@@ -391,63 +396,40 @@
     choiceRow.style.display = 'none';
     choiceHint.style.display = 'none';
 
-    currentChoice = choice;
     logEvent(`She first picked: ${choice === 'home' ? 'Eat at home' : 'Go out'}`);
-    showConfirmChoice();
-  }
 
-  function showConfirmChoice() {
-    const text = document.getElementById('celebrationText');
-    const confirmHint = document.getElementById('confirmHint');
-    const confirmRow = document.getElementById('confirmRow');
-    const confirmYesBtn = document.getElementById('confirmYesBtn');
-    const confirmFlipBtn = document.getElementById('confirmFlipBtn');
-
-    if (currentChoice === 'home') {
-      text.textContent = "Staying in tonight? 🏠";
-      confirmYesBtn.textContent = "Yes, staying home 🏠";
-      confirmFlipBtn.textContent = "Actually, let's go out 🍽️";
+    if (choice === 'home') {
+      document.getElementById('celebrationText').textContent = "Staying in tonight? 🏠";
+      document.getElementById('homeConfirmIntro').style.display = 'block';
+      document.getElementById('homeConfirmCaption').style.display = 'block';
+      document.getElementById('homeConfirmRow').style.display = 'flex';
     } else {
-      text.textContent = "Going out tonight? 🍽️";
-      confirmYesBtn.textContent = "Yes, let's go out 🍽️";
-      confirmFlipBtn.textContent = "Actually, let's stay home 🏠";
-    }
-    confirmYesBtn.onclick = confirmChoice;
-    confirmFlipBtn.onclick = flipChoice;
-
-    confirmHint.textContent = CONFIRM_HINTS[Math.min(flipCount, CONFIRM_HINTS.length - 1)];
-    confirmHint.style.display = 'block';
-    confirmRow.style.display = 'flex';
-  }
-
-  function flipChoice() {
-    flipCount++;
-    currentChoice = currentChoice === 'home' ? 'out' : 'home';
-    logEvent(`She changed her mind to: ${currentChoice === 'home' ? 'Eat at home' : 'Go out'} (flip #${flipCount})`);
-
-    if (flipCount < MAX_FLIPS) {
-      showConfirmChoice();
-    } else {
-      finalizeChoice();
+      finalizeToOut();
     }
   }
 
-  function confirmChoice() {
-    logEvent(`She confirmed: ${currentChoice === 'home' ? 'Eat at home' : 'Go out'}`);
-    finalizeChoice();
-  }
+  function finalizeToOut() {
+    document.getElementById('homeConfirmIntro').style.display = 'none';
+    document.getElementById('homeConfirmCaption').style.display = 'none';
+    document.getElementById('homeConfirmRow').style.display = 'none';
 
-  function finalizeChoice() {
-    document.getElementById('confirmRow').style.display = 'none';
-    document.getElementById('confirmHint').style.display = 'none';
-
-    results.homeOrOut = currentChoice === 'home' ? 'Eat at home 🏠' : 'Go out 🍽️';
-    document.getElementById('celebrationText').textContent = currentChoice === 'home'
-      ? "Perfect, I'll cook something nice for us at home 🏠 What are you craving?"
-      : "Perfect, let's get dressed up and go out 🍽️ What are you craving?";
+    results.homeOrOut = 'Go out 🍽️';
+    logEvent('Ended up going out');
+    document.getElementById('celebrationText').textContent = "Perfect, let's get dressed up and go out 🍽️ What are you craving?";
     launchConfetti();
-    showFoodOptions(currentChoice);
+    showFoodOptions('out');
   }
+
+  createDodgeGame({
+    fleeBtn: document.getElementById('homeYesBtn'),
+    staticBtn: document.getElementById('homeNoBtn'),
+    captionEl: document.getElementById('homeConfirmCaption'),
+    captions: HOME_CAPTIONS,
+    maxAttempts: 3,
+    onGiveUp: (attempts) => {
+      logEvent(`She tried to confirm staying home ${attempts} time(s) before it gave in to going out`);
+    }
+  });
 
   function showFoodOptions(branch) {
     const foodRow = document.getElementById('foodRow');
